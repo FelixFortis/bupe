@@ -1,11 +1,16 @@
 defmodule BUPE.Parser do
   @moduledoc ~S"""
-  An [EPUB 3][EPUB] conforming parser. This implementation should support also
-  EPUB 2.
+  An [EPUB 3][EPUB] conforming parser. This implementation supports EPUB 2 and 3,
+  and can parse EPUBs from both local files and HTTP(S) URLs.
 
   ## Example
 
+      # Parse local file
       BUPE.Parser.parse("sample.epub")
+
+      # Parse from URL
+      BUPE.Parser.parse("https://example.com/book.epub")
+
       #=> %BUPE.Config{
         creator: "John Doe",
         nav: [
@@ -46,12 +51,37 @@ defmodule BUPE.Parser do
 
   @spec run(Path.t()) :: BUPE.Config.t() | no_return
   def run(path) when is_binary(path) do
-    path = path |> Path.expand() |> String.to_charlist()
+    req_client = Application.get_env(:bupe, :req_client, Req)
 
-    with :ok <- check_file(path),
-         :ok <- check_extension(path) do
-      parse(path)
+    cond do
+      url?(path) ->
+        with {:ok, response} <- req_client.get(path, raw: true),
+             %{status: 200, body: body} <- response,
+             <<0x04034B50::little-size(32), _::binary>> <- body do
+          parse(body)
+        else
+          {:error, reason} ->
+            raise ArgumentError, "failed to fetch #{path}: #{inspect(reason)}"
+
+          %{status: status} ->
+            raise ArgumentError, "failed to fetch #{path}: HTTP #{status}"
+
+          _ ->
+            raise ArgumentError, "invalid EPUB format from #{path}"
+        end
+
+      true ->
+        path = path |> Path.expand() |> String.to_charlist()
+
+        with :ok <- check_file(path),
+             :ok <- check_extension(path) do
+          parse(path)
+        end
     end
+  end
+
+  defp url?(path) do
+    String.starts_with?(path, ["http://", "https://"])
   end
 
   defp parse(epub) do
