@@ -39,6 +39,14 @@ defmodule BUPETest do
                "He was an old man who fished alone in a skiff in the Gulf Stream"
              )
     end
+
+    test "raises error with proper path when given URL" do
+      url = "http://localhost:9000/studylockr/project_media/test.epub"
+
+      assert_raise ArgumentError, "file #{url} does not exist", fn ->
+        BUPE.Parser.run(url)
+      end
+    end
   end
 
   describe "build/3" do

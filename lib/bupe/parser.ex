@@ -46,12 +46,21 @@ defmodule BUPE.Parser do
 
   @spec run(Path.t()) :: BUPE.Config.t() | no_return
   def run(path) when is_binary(path) do
-    path = path |> Path.expand() |> String.to_charlist()
+    path =
+      if url?(path) do
+        path
+      else
+        path |> Path.expand() |> String.to_charlist()
+      end
 
     with :ok <- check_file(path),
          :ok <- check_extension(path) do
       parse(path)
     end
+  end
+
+  defp url?(path) do
+    String.starts_with?(path, ["http://", "https://"])
   end
 
   defp parse(epub) do
