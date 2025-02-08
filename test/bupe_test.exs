@@ -1,6 +1,10 @@
 defmodule BUPETest do
   use BUPETest.Case, async: true
+  import Mox
   doctest BUPE
+
+  # Setup mocks
+  setup :verify_on_exit!
 
   describe "parse/1" do
     test "parser should detect that file does not exist" do
@@ -40,12 +44,31 @@ defmodule BUPETest do
              )
     end
 
-    test "raises error with proper path when given URL" do
-      url = "http://localhost:9000/studylockr/project_media/test.epub"
+    test "handles HTTP errors gracefully" do
+      url = "http://localhost:9999/nonexistent.epub"
 
-      assert_raise ArgumentError, "file #{url} does not exist", fn ->
+      expect(Req.Mock, :get, fn ^url, [raw: true] ->
+        {:error, %{reason: :econnrefused}}
+      end)
+
+      assert_raise ArgumentError, "failed to fetch #{url}: %{reason: :econnrefused}", fn ->
         BUPE.Parser.run(url)
       end
+    end
+
+    test "can parse EPUB from URL" do
+      url = "http://example.com/test.epub"
+      epub_path = fixtures_dir("hemingway-old-man-and-the-sea.epub")
+      epub_content = File.read!(epub_path)
+
+      expect(Req.Mock, :get, fn ^url, [raw: true] ->
+        {:ok, %{status: 200, body: epub_content}}
+      end)
+
+      config = BUPE.parse(url)
+      assert config.title == "The Old Man and the Sea"
+      assert config.creator == "Ernest Hemingway"
+      assert is_list(config.pages)
     end
   end
 

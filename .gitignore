@@ -23,3 +23,5 @@ erl_crash.dump
 bupe-*.tar
 
 /tmp
+
+mix.lock
