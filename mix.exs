@@ -29,7 +29,7 @@ defmodule BUPE.Mixfile do
   #
   # Type "mix help compile.app" for more information
   def application do
-    [extra_applications: [:xmerl, :eex, :crypto, :req]]
+    [extra_applications: [:xmerl, :eex, :crypto]]
   end
 
   def dialyzer do
@@ -46,8 +46,6 @@ defmodule BUPE.Mixfile do
 
   defp deps do
     [
-      {:req, "~> 0.5.8"},
-      {:mox, "~> 1.2", only: :test},
       {:ex_doc, "~> 0.19", only: :dev, runtime: false},
       {:dialyxir, "~> 1.0", only: :dev, runtime: false},
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false}
